@@ -28,6 +28,14 @@ int daysBetween(DateTime a, DateTime b) =>
 
 // ───────────────────────── Model ─────────────────────────
 
+/// Eski kayıtlardaki "tedavi süresi (ay)" değerini bitiş tarihine çevirir.
+String? _legacyEndDate(Map<String, dynamic> j) {
+  final months = j['treatmentMonths'];
+  if (months is! int || months <= 0) return null;
+  final start = DateTime.parse(j['startDate']);
+  return dateKey(DateTime(start.year, start.month + months, start.day));
+}
+
 class Medicine {
   final int id;
   String name;
@@ -36,7 +44,8 @@ class Medicine {
   bool enabled;
   final String startDate; 
   int? stockCount; // Kalan toplam hap sayısı
-  int? treatmentMonths;
+  String? endDate; // yyyy-MM-dd, null = süresiz
+  int meal; // 0: aç veya tok, 1: aç, 2: tok
   int intervalDays;
 
   Medicine({
@@ -47,8 +56,9 @@ class Medicine {
     required this.startDate,
     this.enabled = true,
     this.stockCount,
-    this.treatmentMonths,
+    this.endDate,
     this.intervalDays = 1,
+    this.meal = 0,
   });
 
   Map<String, dynamic> toJson() => {
@@ -59,14 +69,25 @@ class Medicine {
         'enabled': enabled,
         'startDate': startDate,
         'stockCount': stockCount,
-        'treatmentMonths': treatmentMonths,
+        'endDate': endDate,
         'intervalDays': intervalDays,
+        'meal': meal,
       };
+
+  DateTime? get endDay => endDate == null ? null : DateTime.parse(endDate!);
+
+  /// Kalan hap, bu kadar dozun altına düşünce "bitmek üzere" sayılır (3 doz günü).
+  int get lowStockThreshold => times.length * 3;
+
+  bool get isStockLow =>
+      stockCount != null && times.isNotEmpty && stockCount! <= lowStockThreshold;
 
   /// Bu ilaç [day] gününde alınmalı mı? (başlangıç tarihinden itibaren N günde bir)
   bool isDueOn(DateTime day) {
     final diff = daysBetween(DateTime.parse(startDate), day);
     if (diff < 0) return false;
+    final end = endDay;
+    if (end != null && daysBetween(end, day) > 0) return false;
     return intervalDays <= 1 || diff % intervalDays == 0;
   }
 
@@ -89,8 +110,9 @@ class Medicine {
         enabled: j['enabled'] ?? true,
         startDate: j['startDate'],
         stockCount: j['stockCount'],
-        treatmentMonths: j['treatmentMonths'],
+        endDate: j['endDate'] ?? _legacyEndDate(j),
         intervalDays: j['intervalDays'] ?? 1,
+        meal: j['meal'] ?? 0,
         
       );
 }
@@ -163,6 +185,88 @@ class _IntervalDaysPickerState extends State<IntervalDaysPicker> {
     );
   }
 }
+/// Aç / tok / fark etmez seçimi.
+class MealPicker extends StatelessWidget {
+  final int value; // 0: aç veya tok, 1: aç, 2: tok
+  final ValueChanged<int> onChanged;
+
+  const MealPicker({super.key, required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final options = {1: s.mealEmpty, 2: s.mealFull, 0: s.mealAny};
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(s.meal, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 8,
+            children: [
+              for (final e in options.entries)
+                ChoiceChip(
+                  label: Text(e.value),
+                  selected: value == e.key,
+                  onSelected: (_) => onChanged(e.key),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// İsteğe bağlı tedavi bitiş tarihi seçici.
+class TreatmentEndPicker extends StatelessWidget {
+  final String? value; // yyyy-MM-dd
+  final ValueChanged<String?> onChanged;
+
+  const TreatmentEndPicker(
+      {super.key, required this.value, required this.onChanged});
+
+  Future<void> _pick(BuildContext context) async {
+    final today = dateOnly(DateTime.now());
+    final current = value == null ? null : DateTime.parse(value!);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: (current != null && !current.isBefore(today))
+          ? current
+          : today.add(const Duration(days: 7)),
+      firstDate: today,
+      lastDate: DateTime(today.year + 5, today.month, today.day),
+    );
+    if (picked != null) onChanged(dateKey(picked));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final text = value == null
+        ? s.endNone
+        : MaterialLocalizations.of(context)
+            .formatMediumDate(DateTime.parse(value!));
+    return InkWell(
+      onTap: () => _pick(context),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: s.endLabel,
+          suffixIcon: value == null
+              ? const Icon(Icons.calendar_today)
+              : IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => onChanged(null),
+                ),
+        ),
+        child: Text(text),
+      ),
+    );
+  }
+}
+
 class MedicineDialog extends StatefulWidget {
   final Medicine? existingMedicine; // Eğer düzenleme yapılacaksa dolu gelir
 
@@ -176,8 +280,10 @@ class _MedicineDialogState extends State<MedicineDialog> {
   late final TextEditingController _nameController;
   late final TextEditingController _doseController;
   late final TextEditingController _stockController;
-  late final TextEditingController _monthController;
+
   late int _intervalDays;
+  String? _endDate;
+  late int _meal;
   late List<int> _times;
 
   @override
@@ -188,7 +294,8 @@ class _MedicineDialogState extends State<MedicineDialog> {
     _nameController = TextEditingController(text: m?.name ?? '');
     _doseController = TextEditingController(text: m?.dose ?? '');
     _stockController = TextEditingController(text: m?.stockCount?.toString() ?? '');
-    _monthController = TextEditingController(text: m?.treatmentMonths?.toString() ?? '');
+    _endDate = m?.endDate;
+    _meal = m?.meal ?? 0;
     _intervalDays = m?.intervalDays ?? 1;
     _times = m != null ? List<int>.from(m.times) : [8 * 60]; // dakika cinsinden
   }
@@ -231,12 +338,17 @@ class _MedicineDialogState extends State<MedicineDialog> {
             TextField(
               controller: _stockController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: s.stockCount),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                labelText: s.stockLabel,
+                helperText: s.stockHelp,
+                helperMaxLines: 2,
+              ),
             ),
-            TextField(
-              controller: _monthController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: s.treatmentDuration),
+            const SizedBox(height: 8),
+            TreatmentEndPicker(
+              value: _endDate,
+              onChanged: (v) => setState(() => _endDate = v),
             ),
             const SizedBox(height: 16),
             // SAATLER BÖLÜMÜ:
@@ -268,6 +380,11 @@ class _MedicineDialogState extends State<MedicineDialog> {
               value: _intervalDays,
               onChanged: (v) => _intervalDays = v,
             ),
+            const SizedBox(height: 12),
+            MealPicker(
+              value: _meal,
+              onChanged: (v) => setState(() => _meal = v),
+            ),
           ],
         ),
       ),
@@ -288,7 +405,8 @@ class _MedicineDialogState extends State<MedicineDialog> {
               times: _times,
               startDate: widget.existingMedicine?.startDate ?? DateTime.now().toIso8601String(),
               stockCount: int.tryParse(_stockController.text),
-              treatmentMonths: int.tryParse(_monthController.text),
+              endDate: _endDate,
+              meal: _meal,
               intervalDays: _intervalDays,
               enabled: widget.existingMedicine?.enabled ?? true,
             );
@@ -311,7 +429,8 @@ class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
 
   AppStrings get _strings =>
-      AppStrings.forLocale(ui.PlatformDispatcher.instance.locale);
+      AppStrings.forLocale(
+          appLocaleNotifier.value ?? ui.PlatformDispatcher.instance.locale);
 
   Future<void> init() async {
     tzdata.initializeTimeZones();
@@ -357,9 +476,9 @@ class NotificationService {
   tz.TZDateTime _at(DateTime day, int minutes) => tz.TZDateTime(
       tz.local, day.year, day.month, day.day, minutes ~/ 60, minutes % 60);
 
-  Future<void> scheduleMedicine(Medicine m) async {
+  NotificationDetails _details() {
     final s = _strings;
-    final details = NotificationDetails(
+    return NotificationDetails(
       android: AndroidNotificationDetails(
         'medicine_channel',
         s.channelName,
@@ -369,11 +488,27 @@ class NotificationService {
       ),
       iOS: const DarwinNotificationDetails(),
     );
-    final body = '${m.name}${m.dose.isNotEmpty ? ' – ${m.dose}' : ''}';
+  }
+
+  Future<void> scheduleMedicine(Medicine m) async {
+    final s = _strings;
+    final details = _details();
+    final body = [
+      '${m.name}${m.dose.isNotEmpty ? ' – ${m.dose}' : ''}',
+      if (m.meal != 0) s.mealLabel(m.meal),
+    ].join(' • ');
     final now = tz.TZDateTime.now(tz.local);
     final today = DateTime(now.year, now.month, now.day);
+    final end = m.endDay;
 
-    if (m.intervalDays <= 1) {
+    await scheduleReminders(m);
+
+    // Günlük tekrar eden bildirim bitiş tarihini bilemez. Bu yüzden N günde bir
+    // alınan ya da bitişi yaklaşan ilaçlarda bildirimler tek tek kurulur.
+    final oneOffs = m.intervalDays > 1 ||
+        (end != null && daysBetween(today, end) <= _intervalOccurrences);
+
+    if (!oneOffs) {
       // Her gün: saat başına günlük tekrar eden bildirim
       for (var i = 0; i < m.times.length; i++) {
         var when = _at(today, m.times[i]);
@@ -390,8 +525,8 @@ class NotificationService {
       return;
     }
 
-    // N günde bir: tekrar eden bildirim yok, yaklaşan doz günleri tek tek kurulur
-    final days = m.nextDueDays(today, _intervalOccurrences);
+    final days =
+        m.nextDueDays(today, _intervalOccurrences).where(m.isDueOn).toList();
     for (var o = 0; o < days.length; o++) {
       for (var i = 0; i < m.times.length; i++) {
         final when = _at(days[o], m.times[i]);
@@ -400,6 +535,70 @@ class NotificationService {
           id: _notifId(m, o, i),
           title: s.notifTitle,
           body: body,
+          when: when,
+          details: details,
+        );
+      }
+    }
+  }
+
+  /// "Hap bitmek üzere" ve "tedavi bitmek üzere" hatırlatmaları (sabah 09:00).
+  /// Zaten eşiğin altındaysa ya da tarih geçtiyse bir sonraki sabaha kurulur;
+  /// uygulama her açıldığında yenilendiği için sorun giderilene kadar devam eder.
+  Future<void> scheduleReminders(Medicine m) async {
+    final s = _strings;
+    final stockId = m.id * _idBlock + 9000;
+    final endId = m.id * _idBlock + 9001;
+    await _plugin.cancel(stockId);
+    await _plugin.cancel(endId);
+
+    final now = tz.TZDateTime.now(tz.local);
+    final today = DateTime(now.year, now.month, now.day);
+    final end = m.endDay;
+    final details = _details();
+
+    tz.TZDateTime nextMorning() {
+      final w = _at(today, 9 * 60);
+      return w.isAfter(now)
+          ? w
+          : _at(DateTime(today.year, today.month, today.day + 1), 9 * 60);
+    }
+
+    bool afterEnd(tz.TZDateTime d) =>
+        end != null && daysBetween(end, DateTime(d.year, d.month, d.day)) > 0;
+
+    // Hap bitiyor
+    final stock = m.stockCount;
+    if (stock != null && m.times.isNotEmpty) {
+      var when = nextMorning();
+      final surplus = stock - m.lowStockThreshold;
+      if (surplus > 0) {
+        // Stok eşiğe inene kadar kaç doz günü gerekiyor?
+        final needed = (surplus + m.times.length - 1) ~/ m.times.length;
+        final day = m.nextDueDays(today, needed).last;
+        final planned = _at(day, 9 * 60);
+        when = planned.isAfter(now) ? planned : nextMorning();
+      }
+      if (!afterEnd(when)) {
+        await _schedule(
+          id: stockId,
+          title: s.stockWarningTitle,
+          body: s.stockWarningBody(m.name),
+          when: when,
+          details: details,
+        );
+      }
+    }
+
+    // Tedavi bitiyor (bitişten 2 gün önce)
+    if (end != null) {
+      var when = _at(DateTime(end.year, end.month, end.day - 2), 9 * 60);
+      if (!when.isAfter(now)) when = nextMorning();
+      if (!afterEnd(when)) {
+        await _schedule(
+          id: endId,
+          title: s.stockWarningTitle,
+          body: s.stockWarningBody(m.name),
           when: when,
           details: details,
         );
@@ -591,6 +790,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       dose: draft.dose,
       times: draft.times,
       intervalDays: draft.intervalDays,
+      stockCount: draft.stockCount,
+      endDate: draft.endDate,
+      meal: draft.meal,
       startDate: dateKey(dateOnly(DateTime.now())),
     );
     setState(() => _meds.add(m));
@@ -618,7 +820,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _setTaken(String key, bool value) async {
-    setState(() => value ? _taken.add(key) : _taken.remove(key));
+    // Doz işaretlenince kalan hap 1 azalır, işaret kaldırılınca 1 artar.
+    final medId = int.tryParse(key.split('|')[1]);
+    final matches = _meds.where((m) => m.id == medId);
+    final med = matches.isEmpty ? null : matches.first;
+
+    var changed = false;
+    setState(() {
+      changed = value ? _taken.add(key) : _taken.remove(key);
+      if (changed && med != null && med.stockCount != null) {
+        final n = med.stockCount!;
+        med.stockCount = value ? (n > 0 ? n - 1 : 0) : n + 1;
+      }
+    });
+
+    if (changed && med != null && med.enabled && med.stockCount != null) {
+      await NotificationService.instance.scheduleReminders(med);
+    }
     await _save();
   }
 
@@ -756,6 +974,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     return Column(
       children: [
+        _buildAlerts(),
         Row(
           children: [
             IconButton(
@@ -845,6 +1064,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
               final parts = <String>[
                 if (d.med.dose.isNotEmpty) d.med.dose,
+                if (d.med.meal != 0) s.mealLabel(d.med.meal),
                 if (overdue) (isPast ? s.missed : s.notTakenYet),
               ];
 
@@ -894,11 +1114,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           child: ListTile(
             onTap: () => _openEditDialog(context, m),
             title: Text(m.name),
-            subtitle: Text([
-              if (m.dose.isNotEmpty) m.dose,
-              m.times.map(timeLabel).join(', '),
-            ].join('\n')),
-            isThreeLine: m.dose.isNotEmpty,
+            subtitle: _medicineSubtitle(m),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -916,6 +1132,83 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
         );
       },
+    );
+  }
+
+  Widget _medicineSubtitle(Medicine m) {
+    final s = AppStrings.of(context);
+    final loc = MaterialLocalizations.of(context);
+    final errorColor = Theme.of(context).colorScheme.error;
+
+    final end = m.endDay;
+    final daysLeft = end == null ? null : daysBetween(_today, end);
+    final ended = daysLeft != null && daysLeft < 0;
+
+    final schedule = [
+      if (m.intervalDays > 1) s.everyNDays(m.intervalDays),
+      if (m.meal != 0) s.mealLabel(m.meal),
+    ];
+    final stockText = m.stockCount == null ? null : s.stockLeft(m.stockCount!);
+    final endText = end == null
+        ? null
+        : (ended ? s.endedLabel : s.endsOn(loc.formatMediumDate(end)));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (m.dose.isNotEmpty) Text(m.dose),
+        Text(m.times.map(timeLabel).join(', ')),
+        if (schedule.isNotEmpty) Text(schedule.join(' • ')),
+        if (stockText != null)
+          Text(stockText,
+              style: (m.isStockLow && !ended)
+                  ? TextStyle(color: errorColor)
+                  : null),
+        if (endText != null)
+          Text(endText,
+              style: (ended || (daysLeft ?? 99) <= 3)
+                  ? TextStyle(color: errorColor)
+                  : null),
+      ],
+    );
+  }
+
+  /// Günlük sekmenin üstündeki uyarı kartı: hap bitiyor / tedavi bitiyor.
+  Widget _buildAlerts() {
+    final s = AppStrings.of(context);
+    final messages = <String>[];
+    for (final m in _meds.where((m) => m.enabled)) {
+      final end = m.endDay;
+      final daysLeft = end == null ? null : daysBetween(_today, end);
+      if (daysLeft != null && daysLeft < 0) continue; // tedavi bitti
+      if (daysLeft != null && daysLeft <= 3) {
+        messages.add(
+            daysLeft == 0 ? s.endsToday(m.name) : s.endsIn(m.name, daysLeft));
+      }
+      if (m.isStockLow) messages.add(s.stockLow(m.name, m.stockCount!));
+    }
+    if (messages.isEmpty) return const SizedBox.shrink();
+
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      color: scheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.warning_amber_rounded, color: scheme.onErrorContainer),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                messages.join('\\n'),
+                style: TextStyle(color: scheme.onErrorContainer),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -965,7 +1258,11 @@ class _MedicineDraft {
   final String dose;
   final List<int> times;
   final int intervalDays;
-  _MedicineDraft(this.name, this.dose, this.times, this.intervalDays);
+  final int? stockCount;
+  final String? endDate;
+  final int meal;
+  _MedicineDraft(this.name, this.dose, this.times, this.intervalDays,
+      {this.stockCount, this.endDate, this.meal = 0});
 }
 
 class _AddDialog extends StatefulWidget {
@@ -981,12 +1278,14 @@ class _AddDialogState extends State<_AddDialog> {
   final _name = TextEditingController();
   final _dose = TextEditingController();
   final _stockController = TextEditingController();
-  final _monthController = TextEditingController();
+
 
   bool _useInterval = false;
   TimeOfDay _firstDose = const TimeOfDay(hour: 8, minute: 0);
   int _intervalHours = 8;
   int _intervalDays = 1;
+  String? _endDate;
+  int _meal = 0;
   final List<int> _manualTimes = [];
   String? _error;
 
@@ -994,6 +1293,7 @@ class _AddDialogState extends State<_AddDialog> {
   void dispose() {
     _name.dispose();
     _dose.dispose();
+    _stockController.dispose();
     super.dispose();
   }
 
@@ -1041,7 +1341,17 @@ class _AddDialogState extends State<_AddDialog> {
       return;
     }
     Navigator.pop(
-        context, _MedicineDraft(name, _dose.text.trim(), times, _intervalDays));
+      context,
+      _MedicineDraft(
+        name,
+        _dose.text.trim(),
+        times,
+        _intervalDays,
+        stockCount: int.tryParse(_stockController.text.trim()),
+        endDate: _endDate,
+        meal: _meal,
+      ),
+    );
   }
 
   @override
@@ -1066,12 +1376,17 @@ class _AddDialogState extends State<_AddDialog> {
             TextField(
               controller: _stockController,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: s.stockCount), // Örn: 30 hap
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                labelText: s.stockLabel,
+                helperText: s.stockHelp,
+                helperMaxLines: 2,
+              ),
             ),
-            TextField(
-              controller: _monthController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: s.treatmentDuration), // Örn: 3 ay
+            const SizedBox(height: 8),
+            TreatmentEndPicker(
+              value: _endDate,
+              onChanged: (v) => setState(() => _endDate = v),
             ),
             const SizedBox(height: 8),
             CheckboxListTile(
@@ -1130,6 +1445,11 @@ class _AddDialogState extends State<_AddDialog> {
             IntervalDaysPicker(
               value: _intervalDays,
               onChanged: (v) => _intervalDays = v,
+            ),
+            const SizedBox(height: 12),
+            MealPicker(
+              value: _meal,
+              onChanged: (v) => setState(() => _meal = v),
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),

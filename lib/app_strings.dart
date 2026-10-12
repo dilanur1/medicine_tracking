@@ -510,16 +510,16 @@ String get settings {
 
   String get repeatEvery {
     switch (_lang) {
-      case 'tr': return 'Belirli aralıklarla tekrar et';
-      case 'es': return 'Repetir a intervalos';
-      case 'de': return 'In Intervallen wiederholen';
-      case 'fr': return 'Répéter à intervalles';
-      case 'it': return 'Ripeti a intervalli';
-      case 'ru': return 'Повторять с интервалами';
-      case 'zh': return '按间隔重复';
-      case 'ja': return '一定間隔で繰り返す';
-      case 'ar': return 'تكرار على فترات';
-      default: return 'Repeat at intervals';
+      case 'tr': return '... saat ara ile';
+      case 'es': return 'Cada ... horas';
+      case 'de': return 'Alle ... Stunden';
+      case 'fr': return 'Toutes les ... heures';
+      case 'it': return 'Ogni ... ore';
+      case 'ru': return 'Каждые ... ч.';
+      case 'zh': return '每隔 ... 小时';
+      case 'ja': return '... 時間おき';
+      case 'ar': return 'كل ... ساعات';
+      default: return 'Every ... hours';
     }
   }
 
@@ -700,6 +700,237 @@ String get settings {
       case 'ja': return 'お薬の時間です！ 💊';
       case 'ar': return 'وقت الدواء! 💊';
       default: return 'Medicine Time! 💊';
+    }
+  }
+
+  // ───── Aç/tok, kalan hap ve tedavi bitiş tarihi ─────
+
+  // Yemekle ilişki: 0 = aç veya tok, 1 = aç, 2 = tok
+  String get meal {
+    switch (_lang) {
+      case 'tr': return 'Yemekle ilişkisi';
+      case 'es': return 'Relación con las comidas';
+      case 'de': return 'Einnahme zum Essen';
+      case 'fr': return 'Rapport aux repas';
+      case 'it': return 'Rapporto con i pasti';
+      case 'ru': return 'Связь с приёмом пищи';
+      case 'zh': return '与进餐的关系';
+      case 'ja': return '食事との関係';
+      case 'ar': return 'العلاقة بالطعام';
+      default: return 'Relation to meals';
+    }
+  }
+
+  String get mealEmpty {
+    switch (_lang) {
+      case 'tr': return 'Aç';
+      case 'es': return 'En ayunas'; // İspanyolca "Açken/Oruçlu" kısa kullanımı
+      case 'de': return 'Nüchtern';  // Almanca açlık/aç karın durumunun doğrudan karşılığı
+      case 'fr': return 'À jeun';    // Fransızca "Açken" kısa etiketi
+      case 'it': return 'A digiuno'; // İtalyanca "Açken" kısa etiketi
+      case 'ru': return 'Натощак';   // Rusça "Açken" kısa etiketi
+      case 'zh': return '空腹';       // Çince "Aç karın / Açlık"
+      case 'ja': return '空腹';       // Japonca "Açlık"
+      case 'ar': return 'صائم';       // Arapça "Aç/Beslenmemiş"
+      default: return 'Fasting';    // İngilizce "Aç/Aç karnına" kısa karşılığı
+    }
+  }
+
+  String get mealFull {
+    switch (_lang) {
+      case 'tr': return 'Tok';
+      case 'es': return 'Saciado';     // İspanyolca (Beslenmiş / Tok)
+      case 'de': return 'Satt';        // Almanca (Karnı tok / Beslenmiş)
+      case 'fr': return 'Rassasié';    // Fransızca (Tok)
+      case 'it': return 'Sazio';       // İtalyanca (Tok)
+      case 'ru': return 'Сытый';       // Rusça (Tok / Beslenmiş)
+      case 'zh': return '饱腹';        // Çince (Karnı tok / Yemek sonrası tok durumu)
+      case 'ja': return '満腹';        // Japonca (Tok / Doymuş)
+      case 'ar': return 'شبعان';       // Arapça (Tok)
+      default: return 'Full';         // İngilizce (Tok)
+    }
+  }
+
+  String get mealAny {
+    switch (_lang) {
+      case 'tr': return 'Aç veya tok';
+      case 'es': return 'En ayunas o con comida';
+      case 'de': return 'Nüchtern oder satt';
+      case 'fr': return 'Avec ou sans repas';
+      case 'it': return 'A stomaco vuoto o pieno';
+      case 'ru': return 'Независимо от еды';
+      case 'zh': return '空腹或饱腹均可';
+      case 'ja': return '空腹・食後どちらでも';
+      case 'ar': return 'على معدة فارغة أو ممتلئة';
+      default: return 'With or without food';
+    }
+  }
+
+  String mealLabel(int m) =>
+      m == 1 ? mealEmpty : (m == 2 ? mealFull : mealAny);
+
+  String get stockLabel {
+    switch (_lang) {
+      case 'tr': return 'Kalan hap sayısı (isteğe bağlı)';
+      case 'es': return 'Pastillas restantes (opcional)';
+      case 'de': return 'Verbleibende Tabletten (optional)';
+      case 'fr': return 'Comprimés restants (facultatif)';
+      case 'it': return 'Pillole rimanenti (facoltativo)';
+      case 'ru': return 'Осталось таблеток (необязательно)';
+      case 'zh': return '剩余药量（可选）';
+      case 'ja': return '残りの錠数（任意）';
+      case 'ar': return 'الحبوب المتبقية (اختياري)';
+      default: return 'Pills left (optional)';
+    }
+  }
+
+  String get stockHelp {
+    switch (_lang) {
+      case 'tr': return 'Doz işaretledikçe düşer, bitmeden önce hatırlatırız';
+      case 'es': return 'Disminuye al marcar dosis; te avisamos antes de que se acaben';
+      case 'de': return 'Sinkt beim Abhaken von Dosen; wir erinnern vor dem Ende';
+      case 'fr': return 'Diminue quand vous cochez les prises ; nous vous prévenons avant la fin';
+      case 'it': return 'Diminuisce quando segni le dosi; ti avvisiamo prima che finiscano';
+      case 'ru': return 'Уменьшается при отметке приёма; напомним до того, как закончатся';
+      case 'zh': return '标记服药后自动减少，药快用完前会提醒你';
+      case 'ja': return '服用を記録すると減ります。なくなる前にお知らせします';
+      case 'ar': return 'تنقص عند تسجيل الجرعات، وسنذكّرك قبل أن تنفد';
+      default: return 'Decreases as you mark doses; we remind you before it runs out';
+    }
+  }
+
+  String get endLabel {
+    switch (_lang) {
+      case 'tr': return 'Tedavi bitiş tarihi (isteğe bağlı)';
+      case 'es': return 'Fecha de fin del tratamiento (opcional)';
+      case 'de': return 'Ende der Behandlung (optional)';
+      case 'fr': return 'Date de fin du traitement (facultatif)';
+      case 'it': return 'Data di fine terapia (facoltativo)';
+      case 'ru': return 'Дата окончания курса (необязательно)';
+      case 'zh': return '疗程结束日期（可选）';
+      case 'ja': return '治療の終了日（任意）';
+      case 'ar': return 'تاريخ انتهاء العلاج (اختياري)';
+      default: return 'Treatment end date (optional)';
+    }
+  }
+
+  String get endNone {
+    switch (_lang) {
+      case 'tr': return 'Süresiz';
+      case 'es': return 'Sin fecha de fin';
+      case 'de': return 'Unbefristet';
+      case 'fr': return 'Sans limite';
+      case 'it': return 'Senza scadenza';
+      case 'ru': return 'Без срока';
+      case 'zh': return '无期限';
+      case 'ja': return '期限なし';
+      case 'ar': return 'بدون تاريخ';
+      default: return 'No end date';
+    }
+  }
+
+  String get endedLabel {
+    switch (_lang) {
+      case 'tr': return 'Tedavi bitti';
+      case 'es': return 'Tratamiento terminado';
+      case 'de': return 'Behandlung beendet';
+      case 'fr': return 'Traitement terminé';
+      case 'it': return 'Terapia terminata';
+      case 'ru': return 'Курс завершён';
+      case 'zh': return '疗程已结束';
+      case 'ja': return '治療終了';
+      case 'ar': return 'انتهى العلاج';
+      default: return 'Treatment ended';
+    }
+  }
+
+  String everyNDays(int n) {
+    switch (_lang) {
+      case 'tr': return 'Her $n günde bir';
+      case 'es': return 'Cada $n días';
+      case 'de': return 'Alle $n Tage';
+      case 'fr': return 'Tous les $n jours';
+      case 'it': return 'Ogni $n giorni';
+      case 'ru': return 'Каждые $n дн.';
+      case 'zh': return '每 $n 天一次';
+      case 'ja': return '$n日ごと';
+      case 'ar': return 'كل $n أيام';
+      default: return 'Every $n days';
+    }
+  }
+
+  String stockLeft(int n) {
+    switch (_lang) {
+      case 'tr': return 'Kalan: $n hap';
+      case 'es': return 'Quedan: $n pastillas';
+      case 'de': return 'Übrig: $n Tabletten';
+      case 'fr': return 'Restant : $n comprimés';
+      case 'it': return 'Rimaste: $n pillole';
+      case 'ru': return 'Осталось: $n шт.';
+      case 'zh': return '剩余：$n 片';
+      case 'ja': return '残り：$n錠';
+      case 'ar': return 'المتبقي: $n حبة';
+      default: return 'Left: $n pills';
+    }
+  }
+
+  String stockLow(String name, int n) {
+    switch (_lang) {
+      case 'tr': return '$name: $n hap kaldı, bitmek üzere';
+      case 'es': return '$name: quedan solo $n pastillas';
+      case 'de': return '$name: nur noch $n Tabletten';
+      case 'fr': return '$name : plus que $n comprimés';
+      case 'it': return '$name: restano solo $n pillole';
+      case 'ru': return '$name: осталось всего $n шт.';
+      case 'zh': return '$name：仅剩 $n 片';
+      case 'ja': return '$name：残り$n錠です';
+      case 'ar': return '$name: تبقّى $n حبة فقط';
+      default: return '$name: only $n pills left';
+    }
+  }
+
+  String endsToday(String name) {
+    switch (_lang) {
+      case 'tr': return '$name: tedavi bugün bitiyor';
+      case 'es': return '$name: el tratamiento termina hoy';
+      case 'de': return '$name: Behandlung endet heute';
+      case 'fr': return '$name : le traitement se termine aujourd\'hui';
+      case 'it': return '$name: la terapia termina oggi';
+      case 'ru': return '$name: курс заканчивается сегодня';
+      case 'zh': return '$name：疗程今天结束';
+      case 'ja': return '$name：今日で治療が終わります';
+      case 'ar': return '$name: ينتهي العلاج اليوم';
+      default: return '$name: treatment ends today';
+    }
+  }
+
+  String endsIn(String name, int n) {
+    switch (_lang) {
+      case 'tr': return '$name: tedavi $n gün içinde bitiyor';
+      case 'es': return '$name: el tratamiento termina en $n días';
+      case 'de': return '$name: Behandlung endet in $n Tagen';
+      case 'fr': return '$name : le traitement se termine dans $n jours';
+      case 'it': return '$name: la terapia termina tra $n giorni';
+      case 'ru': return '$name: курс заканчивается через $n дн.';
+      case 'zh': return '$name：疗程将在 $n 天后结束';
+      case 'ja': return '$name：治療はあと$n日で終わります';
+      case 'ar': return '$name: ينتهي العلاج خلال $n أيام';
+      default: return '$name: treatment ends in $n days';
+    }
+  }
+
+  String endsOn(String date) {
+    switch (_lang) {
+      case 'tr': return 'Bitiş: $date';
+      case 'es': return 'Fin: $date';
+      case 'de': return 'Ende: $date';
+      case 'fr': return 'Fin : $date';
+      case 'it': return 'Fine: $date';
+      case 'ru': return 'Окончание: $date';
+      case 'zh': return '结束：$date';
+      case 'ja': return '終了：$date';
+      case 'ar': return 'الانتهاء: $date';
+      default: return 'Ends: $date';
     }
   }
 
