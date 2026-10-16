@@ -102,6 +102,7 @@ class Medicine {
         DateTime(start.year, start.month, start.day + offset + k * step),
     ];
   }
+
   factory Medicine.fromJson(Map<String, dynamic> j) => Medicine(
         id: j['id'],
         name: j['name'],
@@ -113,7 +114,6 @@ class Medicine {
         endDate: j['endDate'] ?? _legacyEndDate(j),
         intervalDays: j['intervalDays'] ?? 1,
         meal: j['meal'] ?? 0,
-        
       );
 }
 
@@ -125,7 +125,6 @@ class Dose {
 
 // ───────────────────── Interval (days) picker ─────────────────────
 
-/// "Her gün" / "N günde bir" seçimi. Ekleme ve düzenleme dialoglarında ortak.
 class IntervalDaysPicker extends StatefulWidget {
   final int value;
   final ValueChanged<int> onChanged;
@@ -185,6 +184,7 @@ class _IntervalDaysPickerState extends State<IntervalDaysPicker> {
     );
   }
 }
+
 /// Aç / tok / fark etmez seçimi.
 class MealPicker extends StatelessWidget {
   final int value; // 0: aç veya tok, 1: aç, 2: tok
@@ -268,7 +268,7 @@ class TreatmentEndPicker extends StatelessWidget {
 }
 
 class MedicineDialog extends StatefulWidget {
-  final Medicine? existingMedicine; // Eğer düzenleme yapılacaksa dolu gelir
+  final Medicine? existingMedicine;
 
   const MedicineDialog({super.key, this.existingMedicine});
 
@@ -289,7 +289,6 @@ class _MedicineDialogState extends State<MedicineDialog> {
   @override
   void initState() {
     super.initState();
-    // Eğer düzenleme modundaysak alanları eski verilerle dolduruyoruz:
     final m = widget.existingMedicine;
     _nameController = TextEditingController(text: m?.name ?? '');
     _doseController = TextEditingController(text: m?.dose ?? '');
@@ -297,7 +296,7 @@ class _MedicineDialogState extends State<MedicineDialog> {
     _endDate = m?.endDate;
     _meal = m?.meal ?? 0;
     _intervalDays = m?.intervalDays ?? 1;
-    _times = m != null ? List<int>.from(m.times) : [8 * 60]; // dakika cinsinden
+    _times = m != null ? List<int>.from(m.times) : [8 * 60];
   }
 
   void _pickTime() async {
@@ -351,7 +350,6 @@ class _MedicineDialogState extends State<MedicineDialog> {
               onChanged: (v) => setState(() => _endDate = v),
             ),
             const SizedBox(height: 16),
-            // SAATLER BÖLÜMÜ:
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -396,8 +394,6 @@ class _MedicineDialogState extends State<MedicineDialog> {
         ElevatedButton(
           onPressed: () {
             if (_nameController.text.trim().isEmpty) return;
-
-            // Yeni nesne oluştur veya mevcut ID'yi koruyarak güncelle
             final updatedMedicine = Medicine(
               id: widget.existingMedicine?.id ?? DateTime.now().millisecondsSinceEpoch,
               name: _nameController.text.trim(),
@@ -410,7 +406,6 @@ class _MedicineDialogState extends State<MedicineDialog> {
               intervalDays: _intervalDays,
               enabled: widget.existingMedicine?.enabled ?? true,
             );
-
             Navigator.pop(context, updatedMedicine);
           },
           child: Text(isEditing ? s.update : s.save),
@@ -428,6 +423,10 @@ class NotificationService {
 
   final _plugin = FlutterLocalNotificationsPlugin();
 
+  static const actionTaken = 'action_taken';
+
+  static void Function(String actionId, int medId, int minutes, int occurrence)? onNotificationAction;
+
   AppStrings get _strings =>
       AppStrings.forLocale(
           appLocaleNotifier.value ?? ui.PlatformDispatcher.instance.locale);
@@ -439,13 +438,60 @@ class NotificationService {
     tz.setLocalLocation(tz.getLocation(localName));
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const ios = DarwinInitializationSettings(
+    final s = _strings;
+    final ios = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
       requestSoundPermission: false,
+      notificationCategories: [
+        DarwinNotificationCategory(
+          'medicine_category',
+          actions: [
+            DarwinNotificationAction.plain(actionTaken, s.take),
+          ],
+        )
+      ],
     );
     await _plugin.initialize(
-      const InitializationSettings(android: android, iOS: ios),
+      InitializationSettings(android: android, iOS: ios),
+      onDidReceiveNotificationResponse: _onNotificationResponse,
+      onDidReceiveBackgroundNotificationResponse: backgroundNotificationResponseHandler,
+    );
+  }
+
+  static void _onNotificationResponse(NotificationResponse response) {
+    final payload = response.payload;
+    if (payload == null) return;
+    
+    final parts = payload.split('|');
+    if (parts.length < 3) return;
+
+    final medId = int.tryParse(parts[0]) ?? 0;
+    final minutes = int.tryParse(parts[1]) ?? 0;
+    final occurrence = int.tryParse(parts[2]) ?? 0;
+    final actionId = response.actionId;
+
+    if (actionId != null) {
+      onNotificationAction?.call(actionId, medId, minutes, occurrence);
+    }
+  }
+
+  // NotificationService sınıfına eklenecek metod:
+  Future<void> showInstantTestNotification(Medicine m) async {
+    final s = _strings;
+    final details = _details(m.id, m.times.isNotEmpty ? m.times[0] : 0, 0);
+    
+    final body = [
+      '${m.name}${m.dose.isNotEmpty ? ' – ${m.dose}' : ''}',
+      if (m.meal != 0) s.mealLabel(m.meal),
+    ].join(' • ');
+
+    await _plugin.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      s.notifTitle,
+      body,
+      details,
+      payload: '${m.id}|${m.times.isNotEmpty ? m.times[0] : 0}|0',
     );
   }
 
@@ -462,12 +508,7 @@ class NotificationService {
         ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
-  // Bildirim kimliği: her ilaç için 10000'lik bir blok.
-  // Blok içi: doz günü sırası * 100 + saat sırası
   static const _idBlock = 10000;
-
-  // N günde bir alınan ilaçlar için kaç doz günü önceden kurulacak.
-  // (Uygulama her açıldığında yenilenir.)
   static const _intervalOccurrences = 10;
 
   int _notifId(Medicine m, int occurrence, int timeIndex) =>
@@ -476,8 +517,16 @@ class NotificationService {
   tz.TZDateTime _at(DateTime day, int minutes) => tz.TZDateTime(
       tz.local, day.year, day.month, day.day, minutes ~/ 60, minutes % 60);
 
-  NotificationDetails _details() {
+  NotificationDetails _details(int medId, int minutes, int occurrence) {
     final s = _strings;
+    final androidActions = <AndroidNotificationAction>[
+      AndroidNotificationAction(
+        actionTaken,
+        s.take,
+        showsUserInterface: true,
+      )
+    ];
+
     return NotificationDetails(
       android: AndroidNotificationDetails(
         'medicine_channel',
@@ -485,14 +534,16 @@ class NotificationService {
         channelDescription: s.channelDesc,
         importance: Importance.high,
         priority: Priority.high,
+        actions: androidActions,
       ),
-      iOS: const DarwinNotificationDetails(),
+      iOS: const DarwinNotificationDetails(
+        categoryIdentifier: 'medicine_category',
+      ),
     );
   }
 
   Future<void> scheduleMedicine(Medicine m) async {
     final s = _strings;
-    final details = _details();
     final body = [
       '${m.name}${m.dose.isNotEmpty ? ' – ${m.dose}' : ''}',
       if (m.meal != 0) s.mealLabel(m.meal),
@@ -503,13 +554,10 @@ class NotificationService {
 
     await scheduleReminders(m);
 
-    // Günlük tekrar eden bildirim bitiş tarihini bilemez. Bu yüzden N günde bir
-    // alınan ya da bitişi yaklaşan ilaçlarda bildirimler tek tek kurulur.
     final oneOffs = m.intervalDays > 1 ||
         (end != null && daysBetween(today, end) <= _intervalOccurrences);
 
     if (!oneOffs) {
-      // Her gün: saat başına günlük tekrar eden bildirim
       for (var i = 0; i < m.times.length; i++) {
         var when = _at(today, m.times[i]);
         if (when.isBefore(now)) when = when.add(const Duration(days: 1));
@@ -518,7 +566,8 @@ class NotificationService {
           title: s.notifTitle,
           body: body,
           when: when,
-          details: details,
+          details: _details(m.id, m.times[i], 0),
+          payload: '${m.id}|${m.times[i]}|0',
           repeatDaily: true,
         );
       }
@@ -536,15 +585,13 @@ class NotificationService {
           title: s.notifTitle,
           body: body,
           when: when,
-          details: details,
+          details: _details(m.id, m.times[i], o),
+          payload: '${m.id}|${m.times[i]}|$o',
         );
       }
     }
   }
 
-  /// "Hap bitmek üzere" ve "tedavi bitmek üzere" hatırlatmaları (sabah 09:00).
-  /// Zaten eşiğin altındaysa ya da tarih geçtiyse bir sonraki sabaha kurulur;
-  /// uygulama her açıldığında yenilendiği için sorun giderilene kadar devam eder.
   Future<void> scheduleReminders(Medicine m) async {
     final s = _strings;
     final stockId = m.id * _idBlock + 9000;
@@ -555,7 +602,16 @@ class NotificationService {
     final now = tz.TZDateTime.now(tz.local);
     final today = DateTime(now.year, now.month, now.day);
     final end = m.endDay;
-    final details = _details();
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'medicine_channel',
+        s.channelName,
+        channelDescription: s.channelDesc,
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+      iOS: const DarwinNotificationDetails(),
+    );
 
     tz.TZDateTime nextMorning() {
       final w = _at(today, 9 * 60);
@@ -567,13 +623,11 @@ class NotificationService {
     bool afterEnd(tz.TZDateTime d) =>
         end != null && daysBetween(end, DateTime(d.year, d.month, d.day)) > 0;
 
-    // Hap bitiyor
     final stock = m.stockCount;
     if (stock != null && m.times.isNotEmpty) {
       var when = nextMorning();
       final surplus = stock - m.lowStockThreshold;
       if (surplus > 0) {
-        // Stok eşiğe inene kadar kaç doz günü gerekiyor?
         final needed = (surplus + m.times.length - 1) ~/ m.times.length;
         final day = m.nextDueDays(today, needed).last;
         final planned = _at(day, 9 * 60);
@@ -586,11 +640,11 @@ class NotificationService {
           body: s.stockWarningBody(m.name),
           when: when,
           details: details,
+          payload: '${m.id}|0|0',
         );
       }
     }
 
-    // Tedavi bitiyor (bitişten 2 gün önce)
     if (end != null) {
       var when = _at(DateTime(end.year, end.month, end.day - 2), 9 * 60);
       if (!when.isAfter(now)) when = nextMorning();
@@ -601,6 +655,7 @@ class NotificationService {
           body: s.stockWarningBody(m.name),
           when: when,
           details: details,
+          payload: '${m.id}|0|0',
         );
       }
     }
@@ -621,6 +676,7 @@ class NotificationService {
     required String body,
     required tz.TZDateTime when,
     required NotificationDetails details,
+    required String payload,
     bool repeatDaily = false,
   }) async {
     Future<void> go(AndroidScheduleMode mode) => _plugin.zonedSchedule(
@@ -629,6 +685,7 @@ class NotificationService {
           body,
           when,
           details,
+          payload: payload,
           androidScheduleMode: mode,
           matchDateTimeComponents: repeatDaily ? DateTimeComponents.time : null,
         );
@@ -639,6 +696,11 @@ class NotificationService {
       await go(AndroidScheduleMode.inexactAllowWhileIdle);
     }
   }
+}
+
+@pragma('vm:entry-point')
+void backgroundNotificationResponseHandler(NotificationResponse response) {
+  // Arka plan işlemleri burada yönetilebilir.
 }
 
 // ───────────────────────── App ─────────────────────────
@@ -666,7 +728,7 @@ class MedicineApp extends StatelessWidget {
             colorSchemeSeed: Colors.teal,
             useMaterial3: true,
           ),
-          locale: currentLocale, // Kullanıcının seçtiği veya sistem dili
+          locale: currentLocale,
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
@@ -722,6 +784,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     NotificationService.instance.requestPermission();
+    
+    NotificationService.onNotificationAction = (actionId, medId, minutes, occurrence) {
+      _handleNotificationAction(actionId, medId, minutes);
+    };
+
     _load();
   }
 
@@ -769,8 +836,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _rescheduleAll() async {
-    // Eski/yetim bildirimleri temizle, aktif ilaçlar için baştan kur.
-    // (N günde bir alınan ilaçların yaklaşan bildirimleri de böylece yenilenir.)
     await NotificationService.instance.cancelAll();
     for (final m in _meds.where((m) => m.enabled)) {
       await NotificationService.instance.scheduleMedicine(m);
@@ -820,7 +885,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _setTaken(String key, bool value) async {
-    // Doz işaretlenince kalan hap 1 azalır, işaret kaldırılınca 1 artar.
     final medId = int.tryParse(key.split('|')[1]);
     final matches = _meds.where((m) => m.id == medId);
     final med = matches.isEmpty ? null : matches.first;
@@ -838,6 +902,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       await NotificationService.instance.scheduleReminders(med);
     }
     await _save();
+  }
+
+  void _handleNotificationAction(String actionId, int medId, int minutes) async {
+    final medMatches = _meds.where((m) => m.id == medId);
+    if (medMatches.isEmpty) return;
+    
+    final todayStr = dateKey(_today);
+    final doseKeyStr = '$todayStr|$medId|$minutes';
+
+    if (actionId == NotificationService.actionTaken) {
+      if (!_taken.contains(doseKeyStr)) {
+        await _setTaken(doseKeyStr, true);
+      }
+    }
   }
 
   DateTime _dayForIndex(int i) =>
@@ -873,7 +951,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
     if (result == null) return;
 
-    // Eski bildirimleri iptal et, yeni ayarlarla tekrar kur, kaydet
     await NotificationService.instance.cancelMedicine(medicine);
     setState(() {
       final index = _meds.indexWhere((m) => m.id == result.id);
@@ -1120,13 +1197,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               children: [
                 IconButton(
                   icon: const Icon(Icons.delete),
-                  onPressed: () => _completelyDeleteMedicine(context, m), // 👈 Silme fonksiyonu burada!
+                  onPressed: () => _completelyDeleteMedicine(context, m),
                 ),
                 Switch(
                   value: m.enabled,
                   onChanged: (v) => _toggleEnabled(m, v),
                 ),
-                
               ],
             ),
           ),
@@ -1173,14 +1249,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  /// Günlük sekmenin üstündeki uyarı kartı: hap bitiyor / tedavi bitiyor.
   Widget _buildAlerts() {
     final s = AppStrings.of(context);
     final messages = <String>[];
     for (final m in _meds.where((m) => m.enabled)) {
       final end = m.endDay;
       final daysLeft = end == null ? null : daysBetween(_today, end);
-      if (daysLeft != null && daysLeft < 0) continue; // tedavi bitti
+      if (daysLeft != null && daysLeft < 0) continue;
       if (daysLeft != null && daysLeft <= 3) {
         messages.add(
             daysLeft == 0 ? s.endsToday(m.name) : s.endsIn(m.name, daysLeft));
@@ -1202,7 +1277,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                messages.join('\\n'),
+                messages.join('\n'),
                 style: TextStyle(color: scheme.onErrorContainer),
               ),
             ),
@@ -1213,40 +1288,41 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Widget _buildSettingsTab(AppStrings s) {
-    final s = AppStrings.of(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(s.settings),
-      ),
-      body: ListView(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.language),
-            title: Text(s.language),
-            trailing: DropdownButton<String>(
-              value: appLocaleNotifier.value?.languageCode ?? 'tr',
-              items: const [
-                DropdownMenuItem(value: 'tr', child: Text('Türkçe')),
-                DropdownMenuItem(value: 'en', child: Text('English')),
-                DropdownMenuItem(value: 'de', child: Text('Deutsch')),
-                DropdownMenuItem(value: 'es', child: Text('Español')),
-                DropdownMenuItem(value: 'fr', child: Text('Français')),
-                DropdownMenuItem(value: 'it', child: Text('Italiano')),
-                DropdownMenuItem(value: 'ru', child: Text('Русский')),
-                DropdownMenuItem(value: 'zh', child: Text('中文')),
-                DropdownMenuItem(value: 'ja', child: Text('日本語')),
-                DropdownMenuItem(value: 'ar', child: Text('العربية')),
-              ],
-              onChanged: (langCode) {
-                if (langCode != null) {
-                  appLocaleNotifier.value = Locale(langCode);
-                }
-              },
-            ),
+    return ListView(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.language),
+          title: Text(s.language),
+          trailing: DropdownButton<String>(
+            value: appLocaleNotifier.value?.languageCode ?? 'tr',
+            items: const [
+              DropdownMenuItem(value: 'tr', child: Text('Türkçe')),
+              DropdownMenuItem(value: 'en', child: Text('English')),
+              DropdownMenuItem(value: 'de', child: Text('Deutsch')),
+              DropdownMenuItem(value: 'es', child: Text('Español')),
+              DropdownMenuItem(value: 'fr', child: Text('Français')),
+              DropdownMenuItem(value: 'it', child: Text('Italiano')),
+              DropdownMenuItem(value: 'ru', child: Text('Русский')),
+              DropdownMenuItem(value: 'zh', child: Text('中文')),
+              DropdownMenuItem(value: 'ja', child: Text('日本語')),
+              DropdownMenuItem(value: 'ar', child: Text('العربية')),
+            ],
+            onChanged: (langCode) {
+              if (langCode != null) {
+                appLocaleNotifier.value = Locale(langCode);
+              }
+            },
           ),
-        ],
-      ),
+        ),
+        /* ElevatedButton(
+          onPressed: () async {
+            if (_meds.isNotEmpty) {
+              await NotificationService.instance.showInstantTestNotification(_meds.first);
+            }
+          },
+          child: const Text('Test Bildirimi Gönder'),
+        ), */
+      ],
     );
   }
 }
@@ -1278,7 +1354,6 @@ class _AddDialogState extends State<_AddDialog> {
   final _name = TextEditingController();
   final _dose = TextEditingController();
   final _stockController = TextEditingController();
-
 
   bool _useInterval = false;
   TimeOfDay _firstDose = const TimeOfDay(hour: 8, minute: 0);

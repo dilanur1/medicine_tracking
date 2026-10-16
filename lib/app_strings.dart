@@ -459,7 +459,7 @@ String get settings {
       case 'zh': return '服用';
       case 'ja': return '服用する';
       case 'ar': return 'تم الأخذ';
-      default: return 'Take';
+      default: return 'Taken';
     }
   }
 
