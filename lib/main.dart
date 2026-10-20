@@ -166,31 +166,39 @@ class _IntervalDaysPickerState extends State<IntervalDaysPicker> {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     return Column(
-      children: [
-        DropdownButtonFormField<bool>(
-          value: _custom,
-          decoration: InputDecoration(labelText: s.intervalDaysLabel),
-          items: [
-            DropdownMenuItem(value: false, child: Text(s.everyDay)),
-            DropdownMenuItem(value: true, child: Text(s.customInterval)),
-          ],
-          onChanged: (val) {
-            setState(() => _custom = val ?? false);
-            widget.onChanged(_custom ? _parsed : 1);
-          },
-        ),
-        if (_custom) ...[
-          const SizedBox(height: 12),
-          TextField(
-            controller: _controller,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: InputDecoration(labelText: s.intervalDaysLabel),
-            onChanged: (_) => widget.onChanged(_parsed),
-          ),
-        ],
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    DropdownButtonFormField<bool>(
+      value: _custom,
+      isExpanded: true, // Metin uzunsa alta kaymasını veya sığmasını sağlar
+      decoration: InputDecoration(
+        labelText: s.intervalDaysLabel,
+        labelStyle: const TextStyle(fontSize: 13), // Almanca uzunluklar için yazı boyutunu biraz küçültebiliriz
+      ),
+      items: [
+        DropdownMenuItem(value: false, child: Text(s.everyDay, overflow: TextOverflow.ellipsis)),
+        DropdownMenuItem(value: true, child: Text(s.customInterval, overflow: TextOverflow.ellipsis)),
       ],
-    );
+      onChanged: (val) {
+        setState(() => _custom = val ?? false);
+        widget.onChanged(_custom ? _parsed : 1);
+      },
+    ),
+    if (_custom) ...[
+      const SizedBox(height: 12),
+      TextField(
+        controller: _controller,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        decoration: InputDecoration(
+          labelText: s.intervalDaysLabel,
+          labelStyle: const TextStyle(fontSize: 13),
+        ),
+        onChanged: (_) => widget.onChanged(_parsed),
+      ),
+    ],
+  ],
+);
   }
 }
 
@@ -370,7 +378,7 @@ class _MedicineDialogState extends State<MedicineDialog> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12), // Hafif yuvarlatılmış köşeler
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // İç boşluk
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1), // İç boşluk
                   ),
                   child: const Icon(Icons.add_alarm),
                 )
