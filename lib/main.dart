@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
 
@@ -7,9 +8,17 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 import 'app_strings.dart';
+import 'ad_service.dart';
+import 'premium_service.dart';
+
+// ───────────────── Yayın ayarları (YAYINLAMADAN ÖNCE DEĞİŞTİR) ─────────────────
+
+/// Gizlilik politikası sayfanızın herkese açık adresi (Play Console'a da aynısını girin).
+const kPrivacyPolicyUrl = 'https://dilanur1.github.io/medicine_tracking/privacy-policy.html';
 
 // ───────────────────────── Helpers ─────────────────────────
 
@@ -354,10 +363,17 @@ class _MedicineDialogState extends State<MedicineDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(s.addTime, style: const TextStyle(fontWeight: FontWeight.bold)),
-                IconButton(
-                  icon: const Icon(Icons.add_alarm),
+                ElevatedButton(
                   onPressed: _pickTime,
-                ),
+                  style: ElevatedButton.styleFrom(
+                    
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12), // Hafif yuvarlatılmış köşeler
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // İç boşluk
+                  ),
+                  child: const Icon(Icons.add_alarm),
+                )
               ],
             ),
             Wrap(
@@ -708,6 +724,8 @@ void backgroundNotificationResponseHandler(NotificationResponse response) {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.instance.init();
+  unawaited(PremiumService.instance.init());
+  unawaited(AdService.instance.init());
   runApp(const MedicineApp());
 }
 
@@ -825,6 +843,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
     setState(() => _loading = false);
     _rescheduleAll();
+    _maybeShowDisclaimer();
   }
 
   Future<void> _save() async {
@@ -842,7 +861,123 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
+  // ───────── Uyarı / Gizlilik / Premium / Yardım diyalogları ─────────
+
+  static const _disclaimerKey = 'disclaimer_ok_v1';
+
+  Future<void> _maybeShowDisclaimer() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_disclaimerKey) ?? false) return;
+    if (!mounted) return;
+    await _showDisclaimer(firstRun: true);
+    await prefs.setBool(_disclaimerKey, true);
+  }
+
+  Future<void> _showDisclaimer({bool firstRun = false}) {
+    final s = AppStrings.of(context);
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: !firstRun,
+      builder: (dialogContext) => PopScope(
+        canPop: !firstRun,
+        child: AlertDialog(
+          icon: const Icon(Icons.health_and_safety_outlined),
+          title: Text(s.disclaimerTitle),
+          content: SingleChildScrollView(child: Text(s.disclaimerBody)),
+          actions: [
+            TextButton(
+              onPressed: () => _openUrl(kPrivacyPolicyUrl),
+              child: Text(s.privacyPolicy),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(s.disclaimerAccept),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showNotifHelp() {
+    final s = AppStrings.of(context);
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.notifications_active_outlined),
+        title: Text(s.notifHelpTitle),
+        content: SingleChildScrollView(child: Text(s.notifHelpBody)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(s.closeBtn),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openUrl(String url) async {
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
+  Future<void> _showPaywall() {
+    final s = AppStrings.of(context);
+    final premium = PremiumService.instance;
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.workspace_premium),
+        title: Text(s.paywallTitle),
+        content: ValueListenableBuilder<bool>(
+          valueListenable: premium.isPremium,
+          builder: (_, isPremium, __) {
+            if (isPremium) return Text(s.premiumActiveText);
+            return ValueListenableBuilder<String?>(
+              valueListenable: premium.priceText,
+              builder: (_, price, __) {
+                final body =
+                    '${s.paywallBody(PremiumService.freeMedicineLimit)}\n\n${s.removeAdsNote}';
+                return Text(price == null ? '$body\n\n${s.storeUnavailable}' : body);
+              },
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => premium.restore(),
+            child: Text(s.restorePurchases),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(s.closeBtn),
+          ),
+          ValueListenableBuilder<bool>(
+            valueListenable: premium.isPremium,
+            builder: (_, isPremium, __) {
+              if (isPremium) return const SizedBox.shrink();
+              return ValueListenableBuilder<String?>(
+                valueListenable: premium.priceText,
+                builder: (_, price, __) => FilledButton(
+                  onPressed: price == null ? null : () => premium.buy(),
+                  child: Text(s.buyFor(price ?? '…')),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _addMedicine() async {
+    if (!PremiumService.instance.isPremium.value &&
+        _meds.length >= PremiumService.freeMedicineLimit) {
+      await _showPaywall();
+      return;
+    }
     final draft = await showDialog<_MedicineDraft>(
       context: context,
       builder: (_) => const _AddDialog(),
@@ -1020,14 +1155,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         icon: const Icon(Icons.add),
         label: Text(s.addMedicine),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.today), label: s.navDaily),
-          NavigationDestination(
-              icon: const Icon(Icons.medication), label: s.navMedicines),
-          NavigationDestination(icon: const Icon(Icons.settings), label: s.settings),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const AdBanner(),
+          NavigationBar(
+            selectedIndex: _tab,
+            onDestinationSelected: (i) => setState(() => _tab = i),
+            destinations: [
+              NavigationDestination(icon: const Icon(Icons.today), label: s.navDaily),
+              NavigationDestination(
+                  icon: const Icon(Icons.medication), label: s.navMedicines),
+              NavigationDestination(icon: const Icon(Icons.settings), label: s.settings),
+            ],
+          ),
         ],
       ),
       body: _loading
@@ -1189,12 +1330,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
           onDismissed: (_) => _deleteMedicine(m),
           child: ListTile(
-            onTap: () => _openEditDialog(context, m),
             title: Text(m.name),
             subtitle: _medicineSubtitle(m),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => _openEditDialog(context, m),
+                ),
                 IconButton(
                   icon: const Icon(Icons.delete),
                   onPressed: () => _completelyDeleteMedicine(context, m),
@@ -1313,6 +1457,42 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               }
             },
           ),
+        ),
+        ValueListenableBuilder<bool>(
+          valueListenable: PremiumService.instance.isPremium,
+          builder: (_, isPremium, __) => ListTile(
+            leading: const Icon(Icons.workspace_premium),
+            title: Text(s.premiumTitle),
+            subtitle: Text(isPremium
+                ? s.premiumActiveText
+                : s.premiumInactiveSubtitle(PremiumService.freeMedicineLimit)),
+            onTap: isPremium ? null : _showPaywall,
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.notifications_active_outlined),
+          title: Text(s.notifHelpTitle),
+          onTap: _showNotifHelp,
+        ),
+        ListTile(
+          leading: const Icon(Icons.health_and_safety_outlined),
+          title: Text(s.disclaimerTitle),
+          onTap: () => _showDisclaimer(),
+        ),
+        ListTile(
+          leading: const Icon(Icons.privacy_tip_outlined),
+          title: Text(s.privacyPolicy),
+          onTap: () => _openUrl(kPrivacyPolicyUrl),
+        ),
+        ValueListenableBuilder<bool>(
+          valueListenable: AdService.instance.privacyOptionsRequired,
+          builder: (_, required, __) => required
+              ? ListTile(
+                  leading: const Icon(Icons.ads_click),
+                  title: Text(s.adPrivacyOptions),
+                  onTap: AdService.instance.showPrivacyOptions,
+                )
+              : const SizedBox.shrink(),
         ),
         /* ElevatedButton(
           onPressed: () async {
@@ -1486,8 +1666,9 @@ class _AddDialogState extends State<_AddDialog> {
                   DropdownButton<int>(
                     value: _intervalHours,
                     items: [
-                      for (var h = 1; h <= 24; h++)
-                        DropdownMenuItem(value: h, child: Text('$h')),
+                      for (var h = 1; h < 24; h++)
+                        if (24 % h == 0)
+                          DropdownMenuItem(value: h, child: Text('$h')),
                     ],
                     onChanged: (v) => setState(() => _intervalHours = v!),
                   ),

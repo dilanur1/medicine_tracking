@@ -944,6 +944,263 @@ String get settings {
     }
   }
 
+  // ───── Yayın / Premium / Uyarı metinleri ─────
+
+  String get disclaimerTitle {
+    switch (_lang) {
+      case 'tr': return 'Önemli Uyarı';
+      case 'es': return 'Aviso importante';
+      case 'de': return 'Wichtiger Hinweis';
+      case 'fr': return 'Avis important';
+      case 'it': return 'Avviso importante';
+      case 'ru': return 'Важное уведомление';
+      case 'zh': return '重要提示';
+      case 'ja': return '重要なお知らせ';
+      case 'ar': return 'تنبيه هام';
+      default: return 'Important Notice';
+    }
+  }
+
+  String get disclaimerBody {
+    switch (_lang) {
+      case 'tr': return 'Bu uygulama yalnızca ilaçlarınızı hatırlamanıza yardımcı olur. Tıbbi tavsiye, teşhis veya tedavi sunmaz. Her zaman doktorunuzun veya eczacınızın talimatlarına uyun. Cihaz ayarları nedeniyle hatırlatmalar gecikebilir veya gelmeyebilir; bu nedenle kritik ilaçlarınız için yalnızca bu uygulamaya güvenmeyin. Tüm verileriniz yalnızca cihazınızda saklanır.';
+      case 'es': return 'Esta aplicación solo te ayuda a recordar tus medicamentos. No ofrece asesoramiento médico, diagnóstico ni tratamiento. Sigue siempre las indicaciones de tu médico o farmacéutico. Los recordatorios pueden retrasarse o no llegar por la configuración del dispositivo, por lo que no dependas únicamente de esta aplicación para medicamentos críticos. Todos tus datos se guardan solo en tu dispositivo.';
+      case 'de': return 'Diese App hilft dir nur dabei, an deine Medikamente zu denken. Sie bietet keine medizinische Beratung, Diagnose oder Behandlung. Befolge immer die Anweisungen deines Arztes oder Apothekers. Erinnerungen können durch Geräteeinstellungen verspätet oder gar nicht erscheinen. Verlasse dich bei wichtigen Medikamenten daher nicht allein auf diese App. Alle Daten werden nur auf deinem Gerät gespeichert.';
+      case 'fr': return 'Cette application vous aide uniquement à penser à vos médicaments. Elle ne fournit ni conseil médical, ni diagnostic, ni traitement. Suivez toujours les instructions de votre médecin ou de votre pharmacien. Les rappels peuvent être retardés ou manqués selon les paramètres de l’appareil ; ne vous fiez donc pas uniquement à cette application pour les médicaments essentiels. Toutes vos données sont stockées uniquement sur votre appareil.';
+      case 'it': return 'Questa app ti aiuta solo a ricordare i tuoi farmaci. Non fornisce consigli medici, diagnosi o trattamenti. Segui sempre le indicazioni del tuo medico o farmacista. I promemoria possono essere ritardati o non arrivare a causa delle impostazioni del dispositivo, quindi non affidarti solo a questa app per i farmaci essenziali. Tutti i tuoi dati sono salvati solo sul tuo dispositivo.';
+      case 'ru': return 'Это приложение лишь помогает не забывать о приёме лекарств. Оно не даёт медицинских советов, не ставит диагноз и не назначает лечение. Всегда следуйте указаниям врача или фармацевта. Из-за настроек устройства напоминания могут приходить с задержкой или не приходить, поэтому не полагайтесь только на это приложение при приёме важных лекарств. Все ваши данные хранятся только на вашем устройстве.';
+      case 'zh': return '本应用仅用于帮助您记得服药，不提供医疗建议、诊断或治疗。请始终遵循医生或药剂师的指导。由于设备设置，提醒可能延迟或无法送达，因此对于重要药物，请不要只依赖本应用。您的所有数据仅保存在您的设备上。';
+      case 'ja': return 'このアプリは服薬を思い出すためのサポートのみを行い、医療上のアドバイス、診断、治療は提供しません。必ず医師や薬剤師の指示に従ってください。端末の設定によっては通知が遅れたり届かなかったりすることがあるため、重要な薬についてはこのアプリだけに頼らないでください。すべてのデータは端末内にのみ保存されます。';
+      case 'ar': return 'يساعدك هذا التطبيق فقط على تذكّر أدويتك، ولا يقدّم نصيحة طبية أو تشخيصًا أو علاجًا. اتبع دائمًا تعليمات طبيبك أو الصيدلي. قد تتأخر التذكيرات أو لا تصل بسبب إعدادات الجهاز، لذا لا تعتمد على هذا التطبيق وحده للأدوية الحرجة. يتم حفظ جميع بياناتك على جهازك فقط.';
+      default: return 'This app only helps you remember your medicines. It does not provide medical advice, diagnosis or treatment. Always follow your doctor’s or pharmacist’s instructions. Reminders may be delayed or missed because of device settings, so do not rely on this app alone for critical medication. All your data is stored only on your device.';
+    }
+  }
+
+  String get disclaimerAccept {
+    switch (_lang) {
+      case 'tr': return 'Anladım';
+      case 'es': return 'Entendido';
+      case 'de': return 'Verstanden';
+      case 'fr': return 'Compris';
+      case 'it': return 'Ho capito';
+      case 'ru': return 'Понятно';
+      case 'zh': return '我明白了';
+      case 'ja': return '了解しました';
+      case 'ar': return 'فهمت';
+      default: return 'I Understand';
+    }
+  }
+
+  String get privacyPolicy {
+    switch (_lang) {
+      case 'tr': return 'Gizlilik Politikası';
+      case 'es': return 'Política de privacidad';
+      case 'de': return 'Datenschutzerklärung';
+      case 'fr': return 'Politique de confidentialité';
+      case 'it': return 'Informativa sulla privacy';
+      case 'ru': return 'Политика конфиденциальности';
+      case 'zh': return '隐私政策';
+      case 'ja': return 'プライバシーポリシー';
+      case 'ar': return 'سياسة الخصوصية';
+      default: return 'Privacy Policy';
+    }
+  }
+
+  String get notifHelpTitle {
+    switch (_lang) {
+      case 'tr': return 'Bildirimler gelmiyor mu?';
+      case 'es': return '¿No recibes recordatorios?';
+      case 'de': return 'Keine Erinnerungen?';
+      case 'fr': return 'Pas de rappels ?';
+      case 'it': return 'Non ricevi i promemoria?';
+      case 'ru': return 'Не приходят напоминания?';
+      case 'zh': return '收不到提醒？';
+      case 'ja': return '通知が届かない場合';
+      case 'ar': return 'لا تصلك التذكيرات؟';
+      default: return 'Not getting reminders?';
+    }
+  }
+
+  String get notifHelpBody {
+    switch (_lang) {
+      case 'tr': return 'Bazı telefonlar pil tasarrufu için uygulamaları arka planda durdurur. Hatırlatmaların zamanında gelmesi için:\n\n1. Ayarlar > Uygulamalar > bu uygulama > Bildirimler bölümünden bildirimlerin açık olduğundan emin olun.\n2. Ayarlar > Uygulamalar > bu uygulama > Pil bölümünde “Kısıtlanmamış” seçeneğini seçin (veya pil optimizasyonunu kapatın).\n3. Telefon isterse bu uygulama için “Alarmlar ve hatırlatıcılar” iznini verin.\n4. Xiaomi, Huawei, Oppo, Vivo ve Samsung telefonlarda ayrıca “Otomatik başlatma” / “Arka planda çalışma” iznini verin.';
+      case 'es': return 'Algunos teléfonos detienen las aplicaciones en segundo plano para ahorrar batería. Para que los recordatorios lleguen a tiempo:\n\n1. Abre Ajustes > Aplicaciones > esta aplicación > Notificaciones y comprueba que estén activadas.\n2. En Ajustes > Aplicaciones > esta aplicación > Batería, elige “Sin restricciones” (o desactiva la optimización de batería).\n3. Permite “Alarmas y recordatorios” si el teléfono lo solicita.\n4. En teléfonos Xiaomi, Huawei, Oppo, Vivo y Samsung, permite también “Inicio automático” / “Ejecutar en segundo plano”.';
+      case 'de': return 'Manche Smartphones beenden Apps im Hintergrund, um Akku zu sparen. Damit Erinnerungen pünktlich ankommen:\n\n1. Öffne Einstellungen > Apps > diese App > Benachrichtigungen und stelle sicher, dass sie aktiviert sind.\n2. Wähle unter Einstellungen > Apps > diese App > Akku die Option „Unbeschränkt“ (oder deaktiviere die Akkuoptimierung).\n3. Erlaube „Wecker & Erinnerungen“ für diese App, falls das Telefon danach fragt.\n4. Erlaube bei Xiaomi-, Huawei-, Oppo-, Vivo- und Samsung-Geräten zusätzlich „Autostart“ / „Im Hintergrund ausführen“.';
+      case 'fr': return 'Certains téléphones arrêtent les applications en arrière-plan pour économiser la batterie. Pour que les rappels arrivent à l’heure :\n\n1. Ouvrez Paramètres > Applications > cette application > Notifications et vérifiez qu’elles sont activées.\n2. Dans Paramètres > Applications > cette application > Batterie, choisissez « Sans restriction » (ou désactivez l’optimisation de la batterie).\n3. Autorisez « Alarmes et rappels » si le téléphone le demande.\n4. Sur les téléphones Xiaomi, Huawei, Oppo, Vivo et Samsung, autorisez aussi « Démarrage automatique » / « Exécution en arrière-plan ».';
+      case 'it': return 'Alcuni telefoni chiudono le app in background per risparmiare batteria. Per ricevere i promemoria in orario:\n\n1. Apri Impostazioni > App > questa app > Notifiche e verifica che siano attive.\n2. In Impostazioni > App > questa app > Batteria scegli “Senza restrizioni” (o disattiva l’ottimizzazione della batteria).\n3. Consenti “Sveglie e promemoria” se il telefono lo chiede.\n4. Su telefoni Xiaomi, Huawei, Oppo, Vivo e Samsung consenti anche “Avvio automatico” / “Esecuzione in background”.';
+      case 'ru': return 'Некоторые телефоны останавливают приложения в фоне для экономии заряда. Чтобы напоминания приходили вовремя:\n\n1. Откройте Настройки > Приложения > это приложение > Уведомления и убедитесь, что они включены.\n2. В разделе Настройки > Приложения > это приложение > Батарея выберите «Без ограничений» (или отключите оптимизацию батареи).\n3. Разрешите «Будильники и напоминания», если телефон попросит.\n4. На телефонах Xiaomi, Huawei, Oppo, Vivo и Samsung также разрешите «Автозапуск» / «Работу в фоне».';
+      case 'zh': return '部分手机为省电会在后台停止应用运行。为确保提醒准时送达：\n\n1. 打开“设置 > 应用 > 本应用 > 通知”，确认已开启通知。\n2. 在“设置 > 应用 > 本应用 > 电池”中选择“无限制”（或关闭电池优化）。\n3. 如果手机提示，请允许本应用使用“闹钟和提醒”。\n4. 小米、华为、OPPO、vivo 和三星手机还需允许“自启动”/“后台运行”。';
+      case 'ja': return 'バッテリー節約のため、バックグラウンドでアプリを停止する端末があります。通知を時間どおりに受け取るには：\n\n1. 「設定 > アプリ > このアプリ > 通知」で通知がオンになっていることを確認してください。\n2. 「設定 > アプリ > このアプリ > バッテリー」で「制限なし」を選択してください（またはバッテリー最適化をオフにします）。\n3. 端末から求められたら「アラームとリマインダー」を許可してください。\n4. Xiaomi、Huawei、Oppo、Vivo、Samsung の端末では「自動起動」/「バックグラウンド実行」も許可してください。';
+      case 'ar': return 'تقوم بعض الهواتف بإيقاف التطبيقات في الخلفية لتوفير البطارية. لضمان وصول التذكيرات في وقتها:\n\n1. افتح الإعدادات > التطبيقات > هذا التطبيق > الإشعارات وتأكد من تفعيلها.\n2. في الإعدادات > التطبيقات > هذا التطبيق > البطارية اختر "غير مقيّد" (أو أوقف تحسين البطارية).\n3. اسمح بـ"المنبهات والتذكيرات" إذا طلب الهاتف ذلك.\n4. في هواتف Xiaomi وHuawei وOppo وVivo وSamsung اسمح أيضًا بـ"التشغيل التلقائي" / "التشغيل في الخلفية".';
+      default: return 'Some phones stop apps in the background to save battery. To make sure reminders arrive on time:\n\n1. Open Settings > Apps > this app > Notifications and make sure they are on.\n2. Open Settings > Apps > this app > Battery and choose “Unrestricted” (or turn off battery optimization).\n3. Allow “Alarms & reminders” for this app if your phone asks.\n4. On Xiaomi, Huawei, Oppo, Vivo and Samsung phones, also allow “Autostart” / “Run in background”.';
+    }
+  }
+
+  String get premiumTitle {
+    switch (_lang) {
+      case 'tr': return 'Premium';
+      case 'es': return 'Premium';
+      case 'de': return 'Premium';
+      case 'fr': return 'Premium';
+      case 'it': return 'Premium';
+      case 'ru': return 'Премиум';
+      case 'zh': return '高级版';
+      case 'ja': return 'プレミアム';
+      case 'ar': return 'بريميوم';
+      default: return 'Premium';
+    }
+  }
+
+  String get premiumActiveText {
+    switch (_lang) {
+      case 'tr': return 'Premium aktif. Teşekkürler!';
+      case 'es': return 'Premium activo. ¡Gracias!';
+      case 'de': return 'Premium ist aktiv. Danke!';
+      case 'fr': return 'Premium est actif. Merci !';
+      case 'it': return 'Premium attivo. Grazie!';
+      case 'ru': return 'Премиум активен. Спасибо!';
+      case 'zh': return '高级版已激活，谢谢！';
+      case 'ja': return 'プレミアムが有効です。ありがとうございます！';
+      case 'ar': return 'تم تفعيل بريميوم. شكرًا لك!';
+      default: return 'Premium is active. Thank you!';
+    }
+  }
+
+  String premiumInactiveSubtitle(int limit) {
+    switch (_lang) {
+      case 'tr': return 'Ücretsiz sürümde en fazla ${limit} ilaç. Sınırsız için Premium’a geç.';
+      case 'es': return 'La versión gratuita permite hasta ${limit} medicamentos. Pásate a Premium para ilimitados.';
+      case 'de': return 'Die kostenlose Version erlaubt bis zu ${limit} Medikamente. Mit Premium unbegrenzt.';
+      case 'fr': return 'La version gratuite permet jusqu’à ${limit} médicaments. Passez à Premium pour un nombre illimité.';
+      case 'it': return 'La versione gratuita consente fino a ${limit} farmaci. Passa a Premium per averne senza limiti.';
+      case 'ru': return 'В бесплатной версии до ${limit} лекарств. Перейдите на Премиум, чтобы снять ограничение.';
+      case 'zh': return '免费版最多可添加 ${limit} 种药物，升级高级版即可无限添加。';
+      case 'ja': return '無料版では最大${limit}種類まで登録できます。プレミアムで無制限になります。';
+      case 'ar': return 'تتيح النسخة المجانية حتى ${limit} أدوية. انتقل إلى بريميوم لعدد غير محدود.';
+      default: return 'Free version allows up to ${limit} medicines. Go Premium for unlimited.';
+    }
+  }
+
+  String get paywallTitle {
+    switch (_lang) {
+      case 'tr': return 'Ücretsiz sınıra ulaştınız';
+      case 'es': return 'Has alcanzado el límite gratuito';
+      case 'de': return 'Kostenloses Limit erreicht';
+      case 'fr': return 'Limite gratuite atteinte';
+      case 'it': return 'Limite gratuito raggiunto';
+      case 'ru': return 'Достигнут лимит бесплатной версии';
+      case 'zh': return '已达到免费版上限';
+      case 'ja': return '無料版の上限に達しました';
+      case 'ar': return 'وصلت إلى حد النسخة المجانية';
+      default: return 'Free limit reached';
+    }
+  }
+
+  String paywallBody(int limit) {
+    switch (_lang) {
+      case 'tr': return 'Ücretsiz sürümde en fazla ${limit} ilaç ekleyebilirsiniz. Tek seferlik ödemeyle sınırsız ilaç ekleyin. Hatırlatmalar her zaman ücretsiz kalır.';
+      case 'es': return 'La versión gratuita permite hasta ${limit} medicamentos. Desbloquea medicamentos ilimitados con un pago único. Los recordatorios siempre son gratuitos.';
+      case 'de': return 'Die kostenlose Version erlaubt bis zu ${limit} Medikamente. Schalte mit einem Einmalkauf unbegrenzt viele frei. Erinnerungen bleiben immer kostenlos.';
+      case 'fr': return 'La version gratuite permet jusqu’à ${limit} médicaments. Débloquez un nombre illimité avec un achat unique. Les rappels restent toujours gratuits.';
+      case 'it': return 'La versione gratuita consente fino a ${limit} farmaci. Sblocca farmaci illimitati con un acquisto una tantum. I promemoria restano sempre gratuiti.';
+      case 'ru': return 'В бесплатной версии можно добавить до ${limit} лекарств. Откройте неограниченное количество разовой покупкой. Напоминания всегда остаются бесплатными.';
+      case 'zh': return '免费版最多可添加 ${limit} 种药物。一次性购买即可解锁无限添加。提醒功能始终免费。';
+      case 'ja': return '無料版では最大${limit}種類まで登録できます。1回のお支払いで無制限になります。リマインダーは常に無料です。';
+      case 'ar': return 'تتيح النسخة المجانية إضافة ${limit} أدوية كحد أقصى. افتح عددًا غير محدود بعملية شراء لمرة واحدة. تبقى التذكيرات مجانية دائمًا.';
+      default: return 'The free version allows up to ${limit} medicines. Unlock unlimited medicines with a one-time purchase. Reminders always stay free.';
+    }
+  }
+
+  String buyFor(String price) {
+    switch (_lang) {
+      case 'tr': return 'Satın al · ${price}';
+      case 'es': return 'Comprar · ${price}';
+      case 'de': return 'Kaufen · ${price}';
+      case 'fr': return 'Acheter · ${price}';
+      case 'it': return 'Acquista · ${price}';
+      case 'ru': return 'Купить · ${price}';
+      case 'zh': return '购买 · ${price}';
+      case 'ja': return '購入 · ${price}';
+      case 'ar': return 'شراء · ${price}';
+      default: return 'Buy · ${price}';
+    }
+  }
+
+  String get restorePurchases {
+    switch (_lang) {
+      case 'tr': return 'Satın alımları geri yükle';
+      case 'es': return 'Restaurar compras';
+      case 'de': return 'Käufe wiederherstellen';
+      case 'fr': return 'Restaurer les achats';
+      case 'it': return 'Ripristina acquisti';
+      case 'ru': return 'Восстановить покупки';
+      case 'zh': return '恢复购买';
+      case 'ja': return '購入を復元';
+      case 'ar': return 'استعادة المشتريات';
+      default: return 'Restore purchases';
+    }
+  }
+
+  String get storeUnavailable {
+    switch (_lang) {
+      case 'tr': return 'Mağaza şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.';
+      case 'es': return 'La tienda no está disponible ahora. Inténtalo de nuevo más tarde.';
+      case 'de': return 'Der Store ist derzeit nicht verfügbar. Bitte versuche es später erneut.';
+      case 'fr': return 'La boutique est indisponible pour le moment. Veuillez réessayer plus tard.';
+      case 'it': return 'Lo store non è al momento disponibile. Riprova più tardi.';
+      case 'ru': return 'Магазин сейчас недоступен. Попробуйте позже.';
+      case 'zh': return '商店暂时不可用，请稍后再试。';
+      case 'ja': return 'ストアは現在ご利用いただけません。後でもう一度お試しください。';
+      case 'ar': return 'المتجر غير متاح حاليًا. يرجى المحاولة لاحقًا.';
+      default: return 'The store is currently unavailable. Please try again later.';
+    }
+  }
+
+  String get closeBtn {
+    switch (_lang) {
+      case 'tr': return 'Kapat';
+      case 'es': return 'Cerrar';
+      case 'de': return 'Schließen';
+      case 'fr': return 'Fermer';
+      case 'it': return 'Chiudi';
+      case 'ru': return 'Закрыть';
+      case 'zh': return '关闭';
+      case 'ja': return '閉じる';
+      case 'ar': return 'إغلاق';
+      default: return 'Close';
+    }
+  }
+
+  String get removeAdsNote {
+    switch (_lang) {
+      case 'tr': return 'Premium aynı zamanda reklamları da kaldırır.';
+      case 'es': return 'Premium también elimina todos los anuncios.';
+      case 'de': return 'Premium entfernt außerdem alle Werbung.';
+      case 'fr': return 'Premium supprime également toutes les publicités.';
+      case 'it': return 'Premium rimuove anche tutta la pubblicità.';
+      case 'ru': return 'Премиум также убирает всю рекламу.';
+      case 'zh': return '高级版同时会移除所有广告。';
+      case 'ja': return 'プレミアムでは広告もすべて非表示になります。';
+      case 'ar': return 'يزيل بريميوم جميع الإعلانات أيضًا.';
+      default: return 'Premium also removes all ads.';
+    }
+  }
+
+  String get adPrivacyOptions {
+    switch (_lang) {
+      case 'tr': return 'Reklam gizlilik ayarları';
+      case 'es': return 'Ajustes de privacidad de anuncios';
+      case 'de': return 'Datenschutzeinstellungen für Werbung';
+      case 'fr': return 'Paramètres de confidentialité des annonces';
+      case 'it': return 'Impostazioni privacy annunci';
+      case 'ru': return 'Настройки конфиденциальности рекламы';
+      case 'zh': return '广告隐私设置';
+      case 'ja': return '広告のプライバシー設定';
+      case 'ar': return 'إعدادات خصوصية الإعلانات';
+      default: return 'Ad privacy settings';
+    }
+  }
+
   static AppStrings of(BuildContext context) {
     final locale = Localizations.localeOf(context);
     return AppStrings(locale);
